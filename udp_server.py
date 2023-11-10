@@ -4,6 +4,7 @@
 #    - Import the required libraries and modules. 
 #    You may need socket, select, time libraries for the client.
 #    Feel free to use any libraries as well.
+import socket
 
 # **Global Variables**:
 #    - IF NEEDED, Define any global variables that will be used throughout the code.
@@ -12,9 +13,37 @@
 #    - In this section, you will implement the functions you will use in the server side.
 #    - Feel free to add more other functions, and more variables.
 #    - Make sure that names of functions and variables are meaningful.
-def run(serverSocket, serverPort):
-    # The main server function.
-    pass
+def run(serverSocket: socket.socket, serverPort: int):
+    try:
+        serverSocket.bind(("", serverPort))
+        print("Server is running...")
+
+        clients: set[tuple[str, int]] = set()
+        
+        while True:
+            data, sender_address = serverSocket.recvfrom(2048)
+            request, payload = data.decode().split("\r\n\r\n")
+
+            if request == "JOIN":
+                clients.add(sender_address)
+                print(f"User {payload} {sender_address} has joined.")
+
+            elif request == "MESSAGE":
+                username, content = payload.split("\r\n")
+                print(f"Message received from {username} {sender_address}: {content}")
+                message = f"{username}: {content}"
+                for client_address in clients:
+                    if client_address != sender_address:
+                        serverSocket.sendto(message.encode(), client_address)
+
+            elif request == "QUIT":
+                print(f"{payload} {sender_address} has disconnected.")
+                clients.remove(sender_address)
+
+    except KeyboardInterrupt:
+        print("\nShutting down.")
+        serverSocket.close()
+        exit(0)
 
 # **Main Code**:  
 if __name__ == "__main__":
